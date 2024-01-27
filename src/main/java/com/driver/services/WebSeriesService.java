@@ -27,22 +27,32 @@ public class WebSeriesService {
         //use function written in Repository Layer for the same
         //Dont forget to save the production and webseries Repo
 
-        Optional<WebSeries> optionalWebSeries = Optional.ofNullable(webSeriesRepository.findBySeriesName(webSeriesEntryDto.getSeriesName()));
-        if(optionalWebSeries.isEmpty()) {
-            throw new Exception("Series is already present");
+        String seriseName = webSeriesEntryDto.getSeriesName();
+        List<WebSeries> webSeriesList = webSeriesRepository.findAll();
+        for(WebSeries webSeries: webSeriesList) {
+            if(seriseName.equals(webSeries.getSeriesName())) {
+                throw new Exception("Series is already present");
+            }
         }
 
         Optional<ProductionHouse> optionalProductionHouse = productionHouseRepository.findById(webSeriesEntryDto.getProductionHouseId());
         if (optionalProductionHouse.isEmpty()) {
-            throw new Exception("Production House not available");
+            throw new Exception("Invalid productionHouseId");
         }
-
         ProductionHouse productionHouse = optionalProductionHouse.get();
 
-        List<WebSeries> webSeriesList = webSeriesRepository.findAllByProductionHouse(productionHouse);
-        int numberOfWebSeries = webSeriesList.size();
+        int numberOfWebSeries = 0;
+        for(WebSeries webSeries: webSeriesList) {
+            if(webSeries.getProductionHouse().getId() == productionHouse.getId()) numberOfWebSeries++;
+        }
+        double productionRating = productionHouse.getRatings();
+        double totalRating = productionRating*numberOfWebSeries;
 
-        productionHouse.setRatings((productionHouse.getRatings()*numberOfWebSeries+webSeriesEntryDto.getRating())/(numberOfWebSeries+1));
+        double newRating = totalRating+webSeriesEntryDto.getRating();
+        newRating = newRating/(numberOfWebSeries+1);
+
+        productionHouse.setRatings(newRating);
+        productionHouseRepository.save(productionHouse);
 
         WebSeries newWebSeries = new WebSeries();
         newWebSeries.setSeriesName(webSeriesEntryDto.getSeriesName());

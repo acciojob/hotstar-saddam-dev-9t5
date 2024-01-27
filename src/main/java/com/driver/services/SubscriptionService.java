@@ -33,13 +33,10 @@ public class SubscriptionService {
         }
         User user = optionalUser.get();
         Subscription newSubscription = new Subscription();
-
         newSubscription.setSubscriptionType(subscriptionEntryDto.getSubscriptionType());
-
 
         int totalAmountPaid = 0;
         int noOfScreen = 0;
-
         switch (subscriptionEntryDto.getSubscriptionType()) {
             case BASIC:
                 totalAmountPaid = 500;
@@ -54,7 +51,8 @@ public class SubscriptionService {
                 noOfScreen = 350;
                 break;
         }
-        newSubscription.setNoOfScreensSubscribed(Math.min(noOfScreen, subscriptionEntryDto.getNoOfScreensRequired()));
+
+        newSubscription.setNoOfScreensSubscribed(noOfScreen);
         newSubscription.setTotalAmountPaid(totalAmountPaid);
         newSubscription.setStartSubscriptionDate(new Date());
         newSubscription.setUser(user);
@@ -76,19 +74,26 @@ public class SubscriptionService {
         Optional<Subscription> optionalSubscription = subscriptionRepository.findByUser(user);
         if(optionalSubscription.isEmpty()) throw new Exception("Invalid userId");
 
-        Subscription subscription = optionalSubscription.get();
+        List<Subscription> subscriptionList = subscriptionRepository.findAll();
+        for (Subscription subscription: subscriptionList) {
+            if(subscription.getUser().getId() == userId) {
+                if(subscription.getSubscriptionType() == SubscriptionType.ELITE) {
+                    throw new Exception("Already the best Subscription");
+                }else {
+                    if(subscription.getSubscriptionType() == SubscriptionType.BASIC) {
+                        diffAmount = 500;
+                    }else {
+                        diffAmount = 200;
+                    }
+                    subscription.setSubscriptionType(SubscriptionType.ELITE);
+                    subscriptionRepository.save(subscription);
+                    return diffAmount;
+                }
+            }
+        }
 
-        if (subscription.getSubscriptionType() == SubscriptionType.ELITE) {
-            throw new Exception("Already the best Subscription");
-        }
-        if(subscription.getSubscriptionType() == SubscriptionType.BASIC) {
-            diffAmount = 500;
-        }else {
-            diffAmount = 200;
-        }
-        subscription.setSubscriptionType(SubscriptionType.ELITE);
-        subscriptionRepository.save(subscription);
         return diffAmount;
+
     }
 
     public Integer calculateTotalRevenueOfHotstar(){
